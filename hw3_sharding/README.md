@@ -31,11 +31,41 @@
 
 **Результаты (Визуализация):**
 image.png
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/9f3c9816-7a2c-4cf3-9f03-048f442784ea" />
 
-График демонстрирует линейную зависимость времени ответа от объема вставляемых данных. Кластер успешно справился с распределением 20 000 записей без сбоев и ошибок, роутер корректно маршрутизировал данные по шардам.
+График продемонстрирует линейную зависимость времени ответа от объема вставляемых данных. Кластер успешно справился с распределением 20 000 записей без сбоев и ошибок, роутер корректно маршрутизировал данные по шардам.
 
 ## 4. Инструкция по запуску
-1. Поднять кластер: `docker-compose up -d`
-2. Инициализировать шарды через `mongosh`.
-3. Установить зависимости: `pip install pymongo faker matplotlib`
-4. Запустить интерфейс и тесты: `python app.py`
+1.Убедитесь, что у вас установлен Docker. В корневой папке проекта выполните:
+```bash
+docker-compose up -d
+
+Шаг 2. Инициализация шардинга 
+Чтобы настроить реплика-сеты и подключить шарды к роутеру, выполните в терминале следующие 4 команды по очереди:
+
+2.1 Инициализация сервера конфигурации:
+
+```bash
+docker exec -it mongo-config mongosh --port 27019 --eval 'rs.initiate({_id: "configRS", members: [{_id: 0, host: "configsvr:27019"}]})'
+
+2.2 Инициализация первого шарда:
+```bash
+docker exec -it mongo-shard1 mongosh --port 27018 --eval 'rs.initiate({_id: "shard1RS", members: [{_id: 0, host: "shard1:27018"}]})'
+
+2.3 Инициализация второго шарда:
+```bash
+docker exec -it mongo-shard2 mongosh --port 27020 --eval 'rs.initiate({_id: "shard2RS", members: [{_id: 0, host: "shard2:27020"}]})'
+
+2.4 Добавление шардов в роутер:
+```bash
+docker exec -it mongo-router mongosh --port 27017 --eval 'sh.addShard("shard1RS/shard1:27018"); sh.addShard("shard2RS/shard2:27020");'
+
+
+Шаг 3. Запуск клиентского приложения
+3.1 Установите необходимые Python-зависимости:
+```bash
+pip install pymongo faker matplotlib
+
+3.2 Запустите интерфейс и нагрузочное тестирование:
+```bash
+python app.py
